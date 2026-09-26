@@ -3,7 +3,7 @@ const { createInterface } = require('node:readline');
 const { delimiter, join } = require('node:path');
 const { homedir } = require('node:os');
 
-function formatLimits(result) {
+function formatLimits(result, now = Date.now()) {
   const limits = result.rateLimitsByLimitId?.codex ?? result.rateLimits;
   const windows = [limits?.primary, limits?.secondary].filter(window =>
     window && Number.isFinite(window.usedPercent) && Number.isFinite(window.windowDurationMins)
@@ -12,9 +12,19 @@ function formatLimits(result) {
 
   const label = minutes => minutes % 1440 === 0 ? `${minutes / 1440}d`
     : minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`;
+  const timeLeft = resetsAt => {
+    const minutes = Math.max(0, Math.ceil((resetsAt * 1000 - now) / 60000));
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor(minutes % 1440 / 60);
+    return [
+      days && `${days}d`,
+      hours && `${hours}h`,
+      minutes % 60 && `${minutes % 60}m`,
+    ].filter(Boolean).join(' ') || '0m';
+  };
   return {
     text: `Codex ${windows.map(window => `${label(window.windowDurationMins)} ${Math.max(0, Math.round(100 - window.usedPercent))}%`).join(' · ')}`,
-    tooltip: windows.map(window => `${label(window.windowDurationMins)}: ${Math.max(0, Math.round(100 - window.usedPercent))}% remaining; resets ${new Date(window.resetsAt * 1000).toLocaleString()}`).join('\n'),
+    tooltip: windows.map(window => `${label(window.windowDurationMins)}: ${Math.max(0, Math.round(100 - window.usedPercent))}% remaining; resets in ${timeLeft(window.resetsAt)} (${new Date(window.resetsAt * 1000).toLocaleString()})`).join('\n'),
   };
 }
 
@@ -25,6 +35,7 @@ function activate(context) {
   item.show();
 
   let child;
+  let latestResult;
   async function refresh() {
     if (child) return;
     try {
@@ -68,9 +79,11 @@ function activate(context) {
         });
       });
       const display = formatLimits(result);
+      latestResult = result;
       item.text = display.text;
       item.tooltip = display.tooltip;
     } catch (error) {
+      latestResult = undefined;
       item.text = 'Codex limits unavailable';
       item.tooltip = error.message;
     }
@@ -78,7 +91,10 @@ function activate(context) {
 
   refresh();
   const interval = setInterval(refresh, 120000);
-  context.subscriptions.push(item, { dispose() { clearInterval(interval); child?.kill(); } });
+  const countdown = setInterval(() => {
+    if (latestResult) item.tooltip = formatLimits(latestResult).tooltip;
+  }, 60000);
+  context.subscriptions.push(item, { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
 }
 
 module.exports = { activate, formatLimits };
