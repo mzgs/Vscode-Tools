@@ -1,0 +1,6 @@
+install.sh
+package-lock.json
+*.vsix
+.gitignore
+.vscodeignore
+.npm/**
