@@ -32,6 +32,7 @@ function activate(context) {
   const vscode = require('vscode');
   const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
   item.text = 'Codex limits…';
+  item.command = 'vscodeTools.refresh';
   item.show();
 
   let child;
@@ -103,7 +104,7 @@ function activate(context) {
   const countdown = setInterval(() => {
     if (latestResult) item.tooltip = formatLimits(latestResult).tooltip;
   }, 60000);
-  context.subscriptions.push(item, settings, { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
+  context.subscriptions.push(item, settings, vscode.commands.registerCommand('vscodeTools.refresh', refresh), { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
 }
 
 module.exports = { activate, formatLimits };
