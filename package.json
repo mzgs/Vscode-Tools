@@ -1,12 +1,14 @@
 {
   "name": "vscode-tools",
   "displayName": "VS Code Tools",
-  "description": "A placeholder for future VS Code tools.",
+  "description": "Shows Hello in the VS Code status bar.",
   "version": "0.0.1",
   "publisher": "local",
   "engines": {
     "vscode": "^1.74.0"
   },
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
   "categories": ["Other"],
   "scripts": {
     "package": "vsce package --out vscode-tools.vsix --allow-missing-repository --skip-license"
