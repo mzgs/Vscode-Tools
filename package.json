@@ -10,6 +10,19 @@
   "main": "./extension.js",
   "activationEvents": ["onStartupFinished"],
   "categories": ["Other"],
+  "contributes": {
+    "configuration": {
+      "title": "VS Code Tools",
+      "properties": {
+        "vscodeTools.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 1,
+          "description": "Seconds between Codex usage limit refreshes."
+        }
+      }
+    }
+  },
   "scripts": {
     "test": "node test.js",
     "package": "vsce package --out vscode-tools.vsix --allow-missing-repository --skip-license"

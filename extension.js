@@ -90,11 +90,20 @@ function activate(context) {
   }
 
   refresh();
-  const interval = setInterval(refresh, 120000);
+  let interval;
+  function scheduleRefresh() {
+    clearInterval(interval);
+    const seconds = vscode.workspace.getConfiguration('vscodeTools').get('refreshIntervalSeconds', 60);
+    interval = setInterval(refresh, Math.max(1, seconds) * 1000);
+  }
+  scheduleRefresh();
+  const settings = vscode.workspace.onDidChangeConfiguration(event => {
+    if (event.affectsConfiguration('vscodeTools.refreshIntervalSeconds')) scheduleRefresh();
+  });
   const countdown = setInterval(() => {
     if (latestResult) item.tooltip = formatLimits(latestResult).tooltip;
   }, 60000);
-  context.subscriptions.push(item, { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
+  context.subscriptions.push(item, settings, { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
 }
 
 module.exports = { activate, formatLimits };
