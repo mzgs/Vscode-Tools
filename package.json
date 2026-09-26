@@ -1,7 +1,7 @@
 {
   "name": "vscode-tools",
   "displayName": "VS Code Tools",
-  "description": "Shows Hello in the VS Code status bar.",
+  "description": "Shows remaining Codex usage limits in the VS Code status bar.",
   "version": "0.0.1",
   "publisher": "local",
   "engines": {
@@ -11,6 +11,7 @@
   "activationEvents": ["onStartupFinished"],
   "categories": ["Other"],
   "scripts": {
+    "test": "node test.js",
     "package": "vsce package --out vscode-tools.vsix --allow-missing-repository --skip-license"
   },
   "devDependencies": {
