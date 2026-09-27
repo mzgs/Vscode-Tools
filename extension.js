@@ -3,16 +3,22 @@ const { createInterface } = require('node:readline');
 const { delimiter, join } = require('node:path');
 const { homedir } = require('node:os');
 
-function formatLimits(result) {
+function formatLimits(result, now = Date.now()) {
   const limits = result.rateLimitsByLimitId?.codex ?? result.rateLimits;
   const windows = [limits?.primary, limits?.secondary].filter(window =>
-    window && Number.isFinite(window.usedPercent) && Number.isFinite(window.windowDurationMins)
+    window && Number.isFinite(window.usedPercent) && Number.isFinite(window.windowDurationMins) && Number.isFinite(window.resetsAt)
   );
   if (!windows.length) throw new Error('No Codex usage limits available');
 
   const label = minutes => minutes % 1440 === 0 ? `${minutes / 1440}d`
     : minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`;
   const remaining = window => Math.max(0, Math.min(100, Math.round(100 - window.usedPercent)));
+  const timeLeft = resetsAt => {
+    const minutes = Math.max(0, Math.ceil((resetsAt * 1000 - now) / 60000));
+    const days = Math.floor(minutes / 1440);
+    const hours = Math.floor(minutes % 1440 / 60);
+    return [days && `${days}d`, hours && `${hours}h`, !days && minutes % 60 && `${minutes % 60}m`].filter(Boolean).join(' ') || '0m';
+  };
   const labelWidth = Math.max(...windows.map(window => label(window.windowDurationMins).length));
   return {
     text: `Codex ${windows.map(window => `${label(window.windowDurationMins)} ${remaining(window)}%`).join(' · ')}`,
@@ -23,7 +29,7 @@ function formatLimits(result) {
       const reset = window.windowDurationMins < 1440
         ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `${`${label(window.windowDurationMins)} limit:`.padEnd(labelWidth + 8)} ${'█'.repeat(filled)}${'░'.repeat(24 - filled)}  ${`${percent}% left`.padStart(9)} (resets ${reset})`;
+      return `${`${label(window.windowDurationMins)} limit:`.padEnd(labelWidth + 8)} ${'█'.repeat(filled)}${'░'.repeat(24 - filled)}  ${`${percent}% left`.padStart(9)} (resets ${reset} · ${timeLeft(window.resetsAt)} left)`;
     }).join('\n')}\n\`\`\``,
   };
 }
@@ -36,6 +42,7 @@ function activate(context) {
   item.show();
 
   let child;
+  let latestResult;
   async function refresh() {
     if (child) return;
     try {
@@ -79,9 +86,11 @@ function activate(context) {
         });
       });
       const display = formatLimits(result);
+      latestResult = result;
       item.text = display.text;
       item.tooltip = new vscode.MarkdownString(display.tooltip);
     } catch (error) {
+      latestResult = undefined;
       item.text = 'Codex limits unavailable';
       item.tooltip = error.message;
     }
@@ -98,7 +107,10 @@ function activate(context) {
   const settings = vscode.workspace.onDidChangeConfiguration(event => {
     if (event.affectsConfiguration('vscodeTools.refreshIntervalSeconds')) scheduleRefresh();
   });
-  context.subscriptions.push(item, settings, vscode.commands.registerCommand('vscodeTools.refresh', refresh), { dispose() { clearInterval(interval); child?.kill(); } });
+  const countdown = setInterval(() => {
+    if (latestResult) item.tooltip = new vscode.MarkdownString(formatLimits(latestResult).tooltip);
+  }, 60000);
+  context.subscriptions.push(item, settings, vscode.commands.registerCommand('vscodeTools.refresh', refresh), { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
 }
 
 module.exports = { activate, formatLimits };
