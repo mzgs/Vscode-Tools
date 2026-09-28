@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { formatLimits } = require('./extension');
+const { formatLimits, parseGitChanges } = require('./extension');
 
 const now = 1780000000;
 const limits = { rateLimits: {
@@ -13,3 +13,7 @@ assert.match(display.tooltip, /\n7d limit:  █{14}░{10}   60% left \(resets [
 assert.match(formatLimits({ rateLimits: { secondary: { ...limits.rateLimits.secondary, resetsAt: now + (24 * 60 + 3) * 60 } } }, now * 1000).tooltip, /1d left\)/);
 assert.match(formatLimits(limits, (now + 5 * 60) * 1000).tooltip, /0m left/);
 assert.throws(() => formatLimits({ rateLimits: {} }), /No Codex usage limits/);
+assert.deepEqual(parseGitChanges('10\t2\ta.js\n-\t-\timage.png\n3\t0\tb.js\n'), { added: 13, removed: 2 });
+assert.match(formatLimits(limits, now * 1000, { added: 13, removed: 2 }).tooltip,
+  /### Git Changes\n\n```diff\n\+ 13 added lines\n- 2 removed lines\n```$/);
+assert.doesNotMatch(formatLimits(limits, now * 1000, { added: 0, removed: 0 }).tooltip, /Git Changes/);
