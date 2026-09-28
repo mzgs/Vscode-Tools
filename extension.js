@@ -22,7 +22,7 @@ function formatLimits(result, now = Date.now()) {
   const labelWidth = Math.max(...windows.map(window => label(window.windowDurationMins).length));
   return {
     text: `Codex ${windows.map(window => `${label(window.windowDurationMins)} ${remaining(window)}%`).join(' · ')}`,
-    tooltip: `\`\`\`text\n${windows.map(window => {
+    tooltip: `### Stats\n\n\`\`\`text\n${windows.map(window => {
       const percent = remaining(window);
       const filled = Math.round(percent * 24 / 100);
       const date = new Date(window.resetsAt * 1000);
