@@ -47,8 +47,8 @@ function formatLimits(result, now = Date.now(), gitChanges) {
       const reset = window.windowDurationMins < 1440
         ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `${`${label(window.windowDurationMins)} limit:`.padEnd(labelWidth + 8)} ${'█'.repeat(filled)}${'░'.repeat(24 - filled)}  ${`${percent}% left`.padStart(9)} (resets ${reset} · ${timeLeft(window.resetsAt)} left)`;
-    }).join('\n')}\n\`\`\`${gitChanges?.added || gitChanges?.removed ? `\n\n### Git Changes\n\n\`\`\`diff\n+ ${gitChanges.added} added lines\n- ${gitChanges.removed} removed lines\n\`\`\`` : ''}`,
+      return `${`${label(window.windowDurationMins)} limit:`.padEnd(labelWidth + 8)} ${'█'.repeat(filled)}${'░'.repeat(24 - filled)}  ${`${percent}% left`.padStart(9)}\nResets ${reset} · ${timeLeft(window.resetsAt)} left`;
+    }).join('\n\n')}\n\`\`\`${gitChanges?.added || gitChanges?.removed ? `\n\n### Git Changes\n\n\`\`\`diff\n+ ${gitChanges.added} added lines\n- ${gitChanges.removed} removed lines\n\`\`\`` : ''}`,
   };
 }
 
