@@ -2,7 +2,7 @@ const { execFile, spawn } = require('node:child_process');
 const { promisify } = require('node:util');
 const { createInterface } = require('node:readline');
 const { delimiter, join } = require('node:path');
-const { homedir } = require('node:os');
+const { homedir, devNull } = require('node:os');
 
 const execFileAsync = promisify(execFile);
 
@@ -17,8 +17,23 @@ function parseGitChanges(numstat) {
 
 async function getGitChanges(cwd) {
   if (!cwd) return;
-  const { stdout } = await execFileAsync('git', ['diff', '--numstat', 'HEAD'], { cwd });
-  return parseGitChanges(stdout);
+  const { stdout: root } = await execFileAsync('git', ['rev-parse', '--show-toplevel'], { cwd });
+  cwd = root.trimEnd();
+  const [{ stdout }, { stdout: untracked }] = await Promise.all([
+    execFileAsync('git', ['diff', '--numstat', 'HEAD'], { cwd }),
+    execFileAsync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { cwd }),
+  ]);
+  const total = parseGitChanges(stdout);
+  for (const file of untracked.split('\0').filter(Boolean)) {
+    const diff = await execFileAsync('git', ['diff', '--no-index', '--numstat', '--', devNull, file], { cwd })
+      .catch(error => {
+        // Git exits with 1 when the file differs from the empty file.
+        if (error.code === 1) return error;
+        throw error;
+      });
+    total.added += parseGitChanges(diff.stdout).added;
+  }
+  return total;
 }
 
 function formatLimits(result, now = Date.now(), gitChanges) {
@@ -133,4 +148,4 @@ function activate(context) {
   context.subscriptions.push(item, settings, vscode.commands.registerCommand('vscodeTools.refresh', refresh), { dispose() { clearInterval(interval); clearInterval(countdown); child?.kill(); } });
 }
 
-module.exports = { activate, formatLimits, parseGitChanges };
+module.exports = { activate, formatLimits, parseGitChanges, getGitChanges };
