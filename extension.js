@@ -82,7 +82,7 @@ function activate(context) {
     try {
       const result = await new Promise((resolve, reject) => {
         child = spawn('codex', ['app-server'], {
-          env: { ...process.env, PATH: [join(homedir(), '.bun/bin'), join(homedir(), '.local/bin'), process.env.PATH].filter(Boolean).join(delimiter) },
+          env: { ...process.env, PATH: [join(homedir(), '.bun/bin'), join(homedir(), '.local/bin'), process.env.PATH, '/opt/homebrew/bin', '/usr/local/bin'].filter(Boolean).join(delimiter) },
           stdio: ['pipe', 'pipe', 'ignore'],
         });
         const proc = child;
